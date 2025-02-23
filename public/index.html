@@ -17,15 +17,15 @@
         margin: 10px 0;
       }
       .ves-highlighter {
-        position: fixed;
-        pointer-events: none !important;
-        z-index: 9999;
-        border: 2px solid rgba(0, 218, 69, 0.8);
-        background: rgba(255, 255, 255, 0.1);
-        transition: all 0.2s ease;
-        box-sizing: content-box;
-        box-shadow: 0 0 4px rgba(0, 218, 69, 0.3);
-        transform-origin: top left;
+        position: absolute;
+        background: rgba(255, 0, 0, 0.1);
+        border: 2px solid red;
+        pointer-events: none;
+        z-index: 2147483647;
+      }
+      .ves-highlighter.temporary {
+        background: rgba(0, 255, 0, 0.1);
+        border-color: green;
       }
       .ves-highlighter::after {
         content: attr(data-field);

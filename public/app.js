@@ -2,6 +2,8 @@ let isSelecting = false;
 let currentField = null;
 let listenersAdded = false;
 let currentHighlightedElement = null;
+let currentHoverHighlighter = null;
+let fieldCounter = 1;
 
 const highlighters = new Map();
 
@@ -19,7 +21,50 @@ fieldTemplate.innerHTML = `
 
 function addField() {
   const clone = fieldTemplate.cloneNode(true);
+  const nameInput = clone.querySelector(".field-name");
+  nameInput.value = `selector-${fieldCounter++}`;
   document.getElementById("fields-container").appendChild(clone);
+}
+
+function injectHighlighter(doc) {
+  const style = doc.createElement("style");
+  style.textContent = `
+    .ves-highlighter {
+      position: absolute;
+      background: rgba(255, 0, 0, 0.4);
+      z-index: 2147483647;
+      transition: all 0.2s ease;
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+    .ves-highlighter.temporary {
+      border: 2px solid green;
+      background: rgba(0, 255, 0, 0.3);
+    }
+    .highlighter-label {
+      position: absolute;
+      left: 0;
+      right: 0;
+      background: rgba(255, 0, 0, 0.75);
+      color: white;
+      padding: 2px 4px;
+      font-size: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+    }
+    .field-name-label {
+      width: min-content;
+      top: 0;
+      transform: translateY(-100%);
+    }
+    .selector-label {
+      bottom: 0;
+      transform: translateY(100%);
+    }
+  `;
+  doc.head.appendChild(style);
 }
 
 function loadUrl() {
@@ -30,13 +75,12 @@ function loadUrl() {
   // Clear previous iframe
   iframe.src = "about:blank";
 
-  // Set up load handler before setting src
   iframe.addEventListener(
     "load",
     () => {
-      console.log("Iframe content loaded");
       const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-      injectHighlighter(iframeDoc);
+      injectHighlighter(iframeDoc); // Inject styles into iframe
+      console.log("Iframe content loaded");
     },
     { once: true }
   );
@@ -61,90 +105,38 @@ function startSelection(selectBtn) {
   isSelecting = true;
   currentField = selectorInput;
   enableElementSelection();
+  document.addEventListener("click", cancelSelection, true);
 }
 
 function enableElementSelection() {
   const iframe = document.getElementById("target-frame");
   const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
 
-  // Keep interactions but prevent default behaviors
-  iframeDoc.documentElement.style.cursor = "crosshair";
-
-  const highlighter = iframeDoc.getElementById("ves-highlighter");
-  if (highlighter) {
-    highlighter.style.visibility = "visible";
-  }
-  if (!listenersAdded) {
-    addElementListeners(iframeDoc);
-  }
-
-  document.addEventListener("click", cancelSelection, true);
-}
-
-function addElementListeners(doc) {
-  doc.body.querySelectorAll("*").forEach((element) => {
+  // Add hover listeners
+  iframeDoc.body.querySelectorAll("*").forEach((element) => {
     element.addEventListener("mouseover", handleElementHover);
     element.addEventListener("mouseout", handleElementHoverEnd);
-    element.addEventListener("click", handleElementClick);
+    element.addEventListener("click", handleElementClick, { capture: true });
   });
-  listenersAdded = true;
 }
 
 function handleElementHover(e) {
-  e.preventDefault();
-  e.stopPropagation();
-  e.stopImmediatePropagation();
   const element = e.target;
+  const iframeDoc = element.ownerDocument;
 
-  // Remove previous highlighter
-  if (currentHighlightedElement) {
-    handleElementHoverEnd();
+  // Remove previous hover highlighter
+  if (currentHoverHighlighter) {
+    currentHoverHighlighter.remove();
   }
 
-  // Create highlighter wrapper
-  const highlighter = document.createElement("div");
-  highlighter.className = "ves-highlighter";
-  highlighter.style.position = "fixed";
-  highlighter.style.pointerEvents = "none";
-  highlighter.style.zIndex = "9999";
-
-  const frame = document.getElementById("target-frame");
-  const frameRect = frame.getBoundingClientRect();
-  const rect = element.getBoundingClientRect();
-
-  // Get accurate dimensions accounting for transforms
-  const style = window.getComputedStyle(element);
-  const transform = style.transform;
-  const isTransformed = transform && transform !== "none";
-
-  // Use offset dimensions for actual rendered size
-  highlighter.style.width = `${element.offsetWidth}px`;
-  highlighter.style.height = `${element.offsetHeight}px`;
-
-  // Adjust for borders
-  const borderLeft = parseFloat(style.borderLeftWidth) || 0;
-  const borderTop = parseFloat(style.borderTopWidth) || 0;
-  highlighter.style.left = `${
-    frameRect.left + rect.left + window.scrollX + borderLeft
-  }px`;
-  highlighter.style.top = `${
-    frameRect.top + rect.top + window.scrollY + borderTop
-  }px`;
-
-  // Mirror element transforms
-  if (isTransformed) {
-    highlighter.style.transform = transform;
-    highlighter.style.transformOrigin = style.transformOrigin;
-  }
-
-  // Insert at body level to avoid positioning context issues
-  document.body.appendChild(highlighter);
-
-  // Store reference
-  currentHighlightedElement = {
-    element: element,
-    highlighter: highlighter,
-  };
+  // Create temporary hover highlighter
+  currentHoverHighlighter = createHighlighter(
+    element,
+    iframeDoc,
+    true,
+    null,
+    null
+  );
 }
 
 function handleElementHoverEnd(e) {
@@ -156,33 +148,43 @@ function handleElementHoverEnd(e) {
 }
 
 function handleElementClick(e) {
+  // Prevent default behavior and stop propagation
   e.preventDefault();
   e.stopPropagation();
 
-  if (currentField) {
-    const selector = generateCssSelector(e.target);
-    currentField.value = selector;
+  const element = e.target;
+  const iframeDoc = element.ownerDocument;
+  const fieldName = currentField
+    .closest(".field-group")
+    .querySelector(".field-name").value;
+  const selector = generateCssSelector(element);
 
-    const fieldName = currentField
-      .closest(".field-group")
-      .querySelector(".field-name").value;
+  // Create persistent highlighter
+  const highlighter = createHighlighter(
+    element,
+    iframeDoc,
+    false,
+    fieldName,
+    selector
+  );
+  highlighters.set(fieldName, highlighter);
 
-    createHighlighter(e.target, fieldName, selector);
-    cleanupSelection();
-  }
+  // Set selector value
+  currentField.value = selector;
+  cleanupSelection();
 }
 
 function cleanupSelection() {
+  // Remove temporary hover highlighter
+  if (currentHoverHighlighter) {
+    currentHoverHighlighter.remove();
+    currentHoverHighlighter = null;
+  }
+
+  // Remove event listeners
   const iframe = document.getElementById("target-frame");
   const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
 
-  // Remove all highlighters
-  iframeDoc.querySelectorAll(".ves-highlighter").forEach((hl) => hl.remove());
-
-  // Restore cursor
-  iframeDoc.documentElement.style.cursor = "";
-
-  // Cleanup event listeners
   iframeDoc.body.querySelectorAll("*").forEach((element) => {
     element.removeEventListener("mouseover", handleElementHover);
     element.removeEventListener("mouseout", handleElementHoverEnd);
@@ -193,6 +195,11 @@ function cleanupSelection() {
   isSelecting = false;
   currentField = null;
   document.removeEventListener("click", cancelSelection, true);
+
+  // Cleanup all highlighters' scroll listeners
+  highlighters.forEach((highlighter) => {
+    if (highlighter.cleanup) highlighter.cleanup();
+  });
 }
 
 // CSS Selector Generator
@@ -228,62 +235,34 @@ function cancelSelection(e) {
   }
 }
 
-function createHighlighter(element, fieldName, selector) {
-  // Remove existing highlighter for this field
-  if (highlighters.has(fieldName)) {
-    highlighters.get(fieldName).remove();
-  }
+function createHighlighter(element, doc, isTemporary, fieldName, selector) {
+  const highlighter = doc.createElement("div");
+  highlighter.className = "ves-highlighter" + (isTemporary ? " temporary" : "");
 
-  const highlighter = document.createElement("div");
-  highlighter.className = `ves-highlighter ves-${fieldName}`;
-  highlighter.dataset.field = fieldName;
-  highlighter.dataset.selector = selector;
-
-  // Position calculation
   const rect = element.getBoundingClientRect();
-  const iframeRect = document
-    .getElementById("target-frame")
-    .getBoundingClientRect();
-
   highlighter.style.cssText = `
-    position: fixed;
-    left: ${rect.left + iframeRect.left}px;
-    top: ${rect.top + iframeRect.top}px;
+    left: ${rect.left}px;
+    top: ${rect.top}px;
     width: ${rect.width}px;
     height: ${rect.height}px;
-    border: 2px solid;
-    pointer-events: none;
-    z-index: 9999;
-    box-shadow: 0 0 5px currentColor;
   `;
 
-  document.body.appendChild(highlighter);
-  highlighters.set(fieldName, highlighter);
+  if (!isTemporary && fieldName && selector) {
+    // Add field name label
+    const fieldLabel = doc.createElement("div");
+    fieldLabel.className = "highlighter-label field-name-label";
+    fieldLabel.textContent = fieldName;
+    highlighter.appendChild(fieldLabel);
 
-  // Add resize observer
-  new ResizeObserver(() => updateHighlighterPosition(fieldName)).observe(
-    element
-  );
-
-  return highlighter;
-}
-
-function updateHighlighterPosition(fieldName) {
-  const highlighter = highlighters.get(fieldName);
-  if (!highlighter) return;
-
-  const element = document.querySelector(highlighter.dataset.selector);
-  if (element) {
-    const rect = element.getBoundingClientRect();
-    const iframeRect = document
-      .getElementById("target-frame")
-      .getBoundingClientRect();
-
-    highlighter.style.left = `${rect.left + iframeRect.left}px`;
-    highlighter.style.top = `${rect.top + iframeRect.top}px`;
-    highlighter.style.width = `${rect.width}px`;
-    highlighter.style.height = `${rect.height}px`;
+    // Add selector label
+    const selectorLabel = doc.createElement("div");
+    selectorLabel.className = "highlighter-label selector-label";
+    selectorLabel.textContent = selector;
+    highlighter.appendChild(selectorLabel);
   }
+
+  doc.body.appendChild(highlighter);
+  return highlighter;
 }
 
 // Add resize/scroll observer
