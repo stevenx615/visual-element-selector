@@ -1,0 +1,150 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
+* {
+  font-family: 'Roboto', sans-serif;
+  box-sizing: border-box;
+}
+
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background-color: #646cff;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  background-color: #535bf2;
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+}
+#iframe-container {
+  flex: 3;
+}
+
+#controls {
+  flex: 1;
+  padding: 10px;
+}
+
+.controls-buttons {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+#url-input {
+  padding: 8px 12px;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+#url-input:focus {
+  background: #e9f4ff;
+  border: 1px solid #646cff;
+  outline: none;
+}
+
+#fields-container{
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #ccc;
+}
+
+.field-group {
+  margin-bottom: 10px;
+  padding: 10px;
+  background: #f8f8f8;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 0 6px 0 #0000001a;
+}
+
+.field-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.field-controls .field-name {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1em;
+}
+
+.select-btn, .clear-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.select-btn {
+  background: #4CAF50;
+  color: white;
+}
+
+.select-btn:hover {
+  background: #205a22;
+  color: white;
+}
+
+
+.clear-btn {
+  font-size: 20px;
+  background: transparent;
+  color: #f44336;
+}
+
+.clear-btn:hover {
+  background: #f44336;
+  color: white;
+}
+
+.field-info {
+  margin-top: 8px;
+}
+
+.info-item {
+  padding: 8px;
+  margin: 6px 0;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #efefef;
+  font-size: 14px;
+}
+
+.info-label {
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.selector-value {
+  word-break: break-word;
+}
+
+.text-value {
+  max-height: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* Number of lines to show */
+  -webkit-box-orient: vertical;
+  line-height: 20px; /* Adjust based on your font size */
+}
