@@ -1,5 +1,7 @@
 # Visual Element Selector (VES)
 
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+
 A web-based tool for visually selecting and tracking elements on web pages. Perfect for web scraping configuration, UI testing, and element inspection.
 
 ## Features
