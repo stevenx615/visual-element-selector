@@ -11,11 +11,20 @@ const highlighters = new Map();
 const fieldTemplate = document.createElement("div");
 fieldTemplate.className = "field-group";
 fieldTemplate.innerHTML = `
-  <input type="text" placeholder="Field name" class="field-name">
   <div class="field-controls">
-    <input type="text" readonly class="selector-input">
+    <input type="text" placeholder="Field name" class="field-name">
     <button class="select-btn" onclick="startSelection(this)">Select</button>
-    <button class="clear-btn">×</button>
+    <button class="clear-btn" onclick="handleClearButtonClick(this)">×</button>
+  </div>
+  <div class="field-info">
+    <div class="info-item selector-container">
+      <div class="info-label">Selector:</div>
+      <div class="selector-value"></div>
+    </div>
+    <div class="info-item text-container">
+      <div class="info-label">Text Content:</div>
+      <div class="text-value"></div>
+    </div>
   </div>
 `;
 
@@ -96,8 +105,6 @@ function loadUrl() {
 }
 
 function startSelection(selectBtn) {
-  const selectorInput =
-    selectBtn.parentElement.querySelector(".selector-input");
   const fieldName = selectBtn
     .closest(".field-group")
     .querySelector(".field-name").value;
@@ -110,7 +117,7 @@ function startSelection(selectBtn) {
 
   cleanupSelection();
   isSelecting = true;
-  currentField = selectorInput;
+  currentField = selectBtn.closest(".field-group");
   enableElementSelection();
   document.addEventListener("click", cancelSelection, true);
 }
@@ -161,10 +168,11 @@ function handleElementClick(e) {
 
   const element = e.target;
   const iframeDoc = element.ownerDocument;
-  const fieldName = currentField
-    .closest(".field-group")
-    .querySelector(".field-name").value;
+  const fieldName = currentField.querySelector(".field-name").value;
   const selector = generateCssSelector(element);
+
+  // Get element text
+  const elementText = element.textContent?.trim() || "N/A";
 
   // Create persistent highlighter
   const highlighter = createHighlighter(
@@ -176,8 +184,11 @@ function handleElementClick(e) {
   );
   highlighters.set(fieldName, highlighter);
 
-  // Set selector value
-  currentField.value = selector;
+  // Update field display
+  const fieldGroup = currentField;
+  fieldGroup.querySelector(".selector-value").textContent = selector;
+  fieldGroup.querySelector(".text-value").textContent = elementText;
+
   cleanupSelection();
 }
 
@@ -271,4 +282,25 @@ function createHighlighter(element, doc, isTemporary, fieldName, selector) {
 
   doc.body.appendChild(highlighter);
   return highlighter;
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && isSelecting) {
+    cleanupSelection();
+    console.log("Selection canceled by ESC");
+  }
+});
+
+function handleClearButtonClick(clearBtn) {
+  const fieldGroup = clearBtn.closest(".field-group");
+  const fieldName = fieldGroup.querySelector(".field-name").value;
+
+  // Remove highlighter if exists
+  if (highlighters.has(fieldName)) {
+    highlighters.get(fieldName).remove();
+    highlighters.delete(fieldName);
+  }
+
+  // Remove the entire field group
+  fieldGroup.remove();
 }
