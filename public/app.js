@@ -72,14 +72,21 @@ function loadUrl() {
   const proxyUrl = `/proxy?url=${encodeURIComponent(url)}`;
   const iframe = document.getElementById("target-frame");
 
+  // Reset all state
+  document.getElementById("fields-container").innerHTML = ""; // Clear fields
+  highlighters.forEach((h) => h.remove());
+  highlighters.clear();
+  fieldCounter = 1; // Reset field counter
+
   // Clear previous iframe
   iframe.src = "about:blank";
+  cleanupSelection();
 
   iframe.addEventListener(
     "load",
     () => {
       const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-      injectHighlighter(iframeDoc); // Inject styles into iframe
+      injectHighlighter(iframeDoc);
       console.log("Iframe content loaded");
     },
     { once: true }
@@ -123,6 +130,7 @@ function enableElementSelection() {
 function handleElementHover(e) {
   const element = e.target;
   const iframeDoc = element.ownerDocument;
+  const iframe = document.getElementById("target-frame");
 
   // Remove previous hover highlighter
   if (currentHoverHighlighter) {
@@ -140,10 +148,9 @@ function handleElementHover(e) {
 }
 
 function handleElementHoverEnd(e) {
-  if (currentHighlightedElement) {
-    // Remove the highlighter
-    currentHighlightedElement.highlighter.remove();
-    currentHighlightedElement = null;
+  if (currentHoverHighlighter) {
+    currentHoverHighlighter.remove();
+    currentHoverHighlighter = null;
   }
 }
 
@@ -240,12 +247,13 @@ function createHighlighter(element, doc, isTemporary, fieldName, selector) {
   highlighter.className = "ves-highlighter" + (isTemporary ? " temporary" : "");
 
   const rect = element.getBoundingClientRect();
-  highlighter.style.cssText = `
-    left: ${rect.left}px;
-    top: ${rect.top}px;
-    width: ${rect.width}px;
-    height: ${rect.height}px;
-  `;
+  const iframeWindow = doc.defaultView;
+  const scrollX = iframeWindow.scrollX || 0;
+  const scrollY = iframeWindow.scrollY || 0;
+  highlighter.style.left = `${rect.left + scrollX}px`;
+  highlighter.style.top = `${rect.top + scrollY}px`;
+  highlighter.style.width = `${rect.width}px`;
+  highlighter.style.height = `${rect.height}px`;
 
   if (!isTemporary && fieldName && selector) {
     // Add field name label
@@ -264,21 +272,3 @@ function createHighlighter(element, doc, isTemporary, fieldName, selector) {
   doc.body.appendChild(highlighter);
   return highlighter;
 }
-
-// Add resize/scroll observer
-window.addEventListener("resize", updateHighlighters);
-window.addEventListener("scroll", updateHighlighters, { passive: true });
-
-// Add clear button handler
-document.body.addEventListener("click", (e) => {
-  if (e.target.classList.contains("clear-btn")) {
-    const fieldGroup = e.target.closest(".field-group");
-    const fieldName = fieldGroup.querySelector(".field-name").value;
-
-    if (highlighters.has(fieldName)) {
-      highlighters.get(fieldName).remove();
-      highlighters.delete(fieldName);
-    }
-    fieldGroup.querySelector(".selector-input").value = "";
-  }
-});

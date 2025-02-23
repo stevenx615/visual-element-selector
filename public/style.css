@@ -1,11 +1,14 @@
-.ves-highlighter {
-  position: fixed;
-  pointer-events: none !important;
-  z-index: 9999;
-  border: 2px solid rgba(0, 218, 69, 0.8);
-  background: rgba(0, 218, 69, 0.15);
-  transition: all 0.1s ease;
-  box-sizing: border-box;
-  box-shadow: 0 0 4px rgba(0, 218, 69, 0.3);
-  transform-origin: top left;
+.container {
+  display: flex;
+}
+#iframe-container {
+  width: 60%;
+  height: 100vh;
+}
+#controls {
+  width: 40%;
+  padding: 20px;
+}
+.field-group {
+  margin: 10px 0;
 }

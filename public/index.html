@@ -1,63 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <style>
-      .container {
-        display: flex;
-      }
-      #iframe-container {
-        width: 60%;
-        height: 100vh;
-      }
-      #controls {
-        width: 40%;
-        padding: 20px;
-      }
-      .field-group {
-        margin: 10px 0;
-      }
-      .ves-highlighter {
-        position: absolute;
-        background: rgba(255, 0, 0, 0.1);
-        border: 2px solid red;
-        pointer-events: none;
-        z-index: 2147483647;
-      }
-      .ves-highlighter.temporary {
-        background: rgba(0, 255, 0, 0.1);
-        border-color: green;
-      }
-      .ves-highlighter::after {
-        content: attr(data-field);
-        position: absolute;
-        bottom: 100%;
-        left: 0;
-        background: black;
-        color: white;
-        padding: 2px 5px;
-        font-size: 12px;
-        white-space: nowrap;
-      }
-      /* Dynamic color classes */
-      .ves-highlighter[data-field]:nth-of-type(6n + 1) {
-        border-color: #ff0000;
-      }
-      .ves-highlighter[data-field]:nth-of-type(6n + 2) {
-        border-color: #00ff00;
-      }
-      .ves-highlighter[data-field]:nth-of-type(6n + 3) {
-        border-color: #0000ff;
-      }
-      .ves-highlighter[data-field]:nth-of-type(6n + 4) {
-        border-color: #ff00ff;
-      }
-      .ves-highlighter[data-field]:nth-of-type(6n + 5) {
-        border-color: #ffff00;
-      }
-      .ves-highlighter[data-field]:nth-of-type(6n + 6) {
-        border-color: #00ffff;
-      }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <title>Document</title>
   </head>
   <body>
     <div class="container">
