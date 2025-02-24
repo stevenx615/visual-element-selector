@@ -1,13 +1,10 @@
 let isSelecting = false;
 let currentField = null;
 let listenersAdded = false;
-let currentHighlightedElement = null;
 let currentHoverHighlighter = null;
 let fieldCounter = 1;
-
 const highlighters = new Map();
 
-// Field template
 const fieldTemplate = document.createElement("div");
 fieldTemplate.className = "field-group";
 fieldTemplate.innerHTML = `
@@ -33,6 +30,34 @@ function addField() {
   const nameInput = clone.querySelector(".field-name");
   nameInput.value = `selector-${fieldCounter++}`;
   document.getElementById("fields-container").appendChild(clone);
+}
+
+function loadUrl() {
+  const url = document.getElementById("url-input").value;
+  const proxyUrl = `/proxy?url=${encodeURIComponent(url)}`;
+  const iframe = document.getElementById("target-frame");
+
+  // Reset all state
+  document.getElementById("fields-container").innerHTML = "";
+  highlighters.forEach((h) => h.remove());
+  highlighters.clear();
+  fieldCounter = 1;
+
+  // Clear previous iframe
+  iframe.src = "about:blank";
+  cleanupSelection();
+
+  iframe.addEventListener(
+    "load",
+    () => {
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+      injectHighlighter(iframeDoc);
+      console.log("Iframe content loaded");
+    },
+    { once: true }
+  );
+
+  iframe.src = proxyUrl;
 }
 
 function injectHighlighter(doc) {
@@ -76,34 +101,6 @@ function injectHighlighter(doc) {
   doc.head.appendChild(style);
 }
 
-function loadUrl() {
-  const url = document.getElementById("url-input").value;
-  const proxyUrl = `/proxy?url=${encodeURIComponent(url)}`;
-  const iframe = document.getElementById("target-frame");
-
-  // Reset all state
-  document.getElementById("fields-container").innerHTML = ""; // Clear fields
-  highlighters.forEach((h) => h.remove());
-  highlighters.clear();
-  fieldCounter = 1; // Reset field counter
-
-  // Clear previous iframe
-  iframe.src = "about:blank";
-  cleanupSelection();
-
-  iframe.addEventListener(
-    "load",
-    () => {
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-      injectHighlighter(iframeDoc);
-      console.log("Iframe content loaded");
-    },
-    { once: true }
-  );
-
-  iframe.src = proxyUrl;
-}
-
 function startSelection(selectBtn) {
   const fieldName = selectBtn
     .closest(".field-group")
@@ -126,12 +123,46 @@ function enableElementSelection() {
   const iframe = document.getElementById("target-frame");
   const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
 
-  // Add hover listeners
+  // Wait for DOM to be fully ready
+  const tryInit = () => {
+    if (iframeDoc.readyState === "complete") {
+      // Add hover listeners to frame elements
+      iframeDoc.body.querySelectorAll("*").forEach((element) => {
+        element.addEventListener("mouseover", handleElementHover);
+        element.addEventListener("mouseout", handleElementHoverEnd);
+        element.addEventListener("click", handleElementClick, {
+          capture: true,
+        });
+      });
+    } else {
+      setTimeout(tryInit, 10);
+    }
+  };
+
+  tryInit();
+}
+
+function cleanupSelection() {
+  // Remove temporary hover highlighter
+  if (currentHoverHighlighter) {
+    currentHoverHighlighter.remove();
+    currentHoverHighlighter = null;
+  }
+
+  // Remove event listeners
+  const iframe = document.getElementById("target-frame");
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
   iframeDoc.body.querySelectorAll("*").forEach((element) => {
-    element.addEventListener("mouseover", handleElementHover);
-    element.addEventListener("mouseout", handleElementHoverEnd);
-    element.addEventListener("click", handleElementClick, { capture: true });
+    element.removeEventListener("mouseover", handleElementHover);
+    element.removeEventListener("mouseout", handleElementHoverEnd);
+    element.removeEventListener("click", handleElementClick);
   });
+
+  listenersAdded = false;
+  isSelecting = false;
+  currentField = null;
+  document.removeEventListener("click", cancelSelection, true);
 }
 
 function handleElementHover(e) {
@@ -162,7 +193,6 @@ function handleElementHoverEnd(e) {
 }
 
 function handleElementClick(e) {
-  // Prevent default behavior and stop propagation
   e.preventDefault();
   e.stopPropagation();
 
@@ -171,7 +201,6 @@ function handleElementClick(e) {
   const fieldName = currentField.querySelector(".field-name").value;
   const selector = generateCssSelector(element);
 
-  // Get element text
   const elementText = element.textContent?.trim() || "N/A";
 
   // Create persistent highlighter
@@ -184,7 +213,6 @@ function handleElementClick(e) {
   );
   highlighters.set(fieldName, highlighter);
 
-  // Update field display
   const fieldGroup = currentField;
   fieldGroup.querySelector(".selector-value").textContent = selector;
   fieldGroup.querySelector(".text-value").textContent = elementText;
@@ -192,35 +220,6 @@ function handleElementClick(e) {
   cleanupSelection();
 }
 
-function cleanupSelection() {
-  // Remove temporary hover highlighter
-  if (currentHoverHighlighter) {
-    currentHoverHighlighter.remove();
-    currentHoverHighlighter = null;
-  }
-
-  // Remove event listeners
-  const iframe = document.getElementById("target-frame");
-  const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-
-  iframeDoc.body.querySelectorAll("*").forEach((element) => {
-    element.removeEventListener("mouseover", handleElementHover);
-    element.removeEventListener("mouseout", handleElementHoverEnd);
-    element.removeEventListener("click", handleElementClick);
-  });
-
-  listenersAdded = false;
-  isSelecting = false;
-  currentField = null;
-  document.removeEventListener("click", cancelSelection, true);
-
-  // Cleanup all highlighters' scroll listeners
-  highlighters.forEach((highlighter) => {
-    if (highlighter.cleanup) highlighter.cleanup();
-  });
-}
-
-// CSS Selector Generator
 function generateCssSelector(element) {
   const path = [];
   while (element && element.nodeType === Node.ELEMENT_NODE) {
@@ -244,13 +243,6 @@ function generateCssSelector(element) {
     element = element.parentNode;
   }
   return path.join(" > ");
-}
-
-function cancelSelection(e) {
-  if (!e.target.closest("#iframe-container")) {
-    cleanupSelection();
-    console.log("Selection canceled");
-  }
 }
 
 function createHighlighter(element, doc, isTemporary, fieldName, selector) {
@@ -301,6 +293,20 @@ function handleClearButtonClick(clearBtn) {
     highlighters.delete(fieldName);
   }
 
-  // Remove the entire field group
   fieldGroup.remove();
 }
+
+function cancelSelection(e) {
+  if (!e.target.closest("#iframe-container")) {
+    cleanupSelection();
+    console.log("Selection canceled");
+  }
+}
+
+// wait for the main page to be loaded
+document.addEventListener("DOMContentLoaded", () => {
+  // URL input text selection
+  document.getElementById("url-input").addEventListener("click", (e) => {
+    e.target.select();
+  });
+});
