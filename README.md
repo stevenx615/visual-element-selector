@@ -13,6 +13,8 @@ A web-based tool for visually selecting and tracking elements on web pages. Perf
 - 🚀 **Cross-Origin Support**: Proxy system for loading external pages
 - ⌨️ **Keyboard Shortcuts**: Use ESC to cancel selections
 
+![Quicker_20250322_112055](https://github.com/user-attachments/assets/66144287-8cb4-4658-8fdf-3d18207a253b)
+
 ## Usage
 
 1. **Load a URL**
