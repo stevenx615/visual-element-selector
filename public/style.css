@@ -5,6 +5,10 @@
   box-sizing: border-box;
 }
 
+body {
+  margin: 0;
+}
+
 button {
   padding: 8px 16px;
   border: none;
@@ -27,7 +31,7 @@ button:active {
 
 .container {
   display: flex;
-  height: 100vh;
+  height: 99vh;
 }
 #iframe-container {
   flex: 3;
@@ -60,8 +64,9 @@ button:active {
 }
 
 #fields-container{
-  margin-top: 10px;
-  padding-top: 10px;
+  padding: 20px 0;
+  height: 90vh;
+  overflow-y: auto;
   border-top: 1px solid #ccc;
 }
 
